@@ -1,0 +1,41 @@
+# Local Laravel app for OrcaRail Cashier real-flow tests.
+# Does not join the root orcarail-net — API/pay run on the host.
+name: orcarail-laravel
+
+services:
+  app:
+    build:
+      context: ./e2e
+      dockerfile: Dockerfile
+    ports:
+      - '${LARAVEL_PORT:-8090}:8000'
+    environment:
+      ORCARAIL_API_KEY: ${ORCARAIL_API_KEY:-}
+      ORCARAIL_API_SECRET: ${ORCARAIL_API_SECRET:-}
+      ORCARAIL_WEBHOOK_SECRET: ${ORCARAIL_WEBHOOK_SECRET:-}
+      ORCARAIL_BASE_URL: ${ORCARAIL_BASE_URL:-http://host.docker.internal:3000/api/v1}
+      ORCARAIL_PAY_URL: ${ORCARAIL_PAY_URL:-http://host.docker.internal:5174}
+      ORCARAIL_CURRENCY: ${ORCARAIL_CURRENCY:-usd}
+      ORCARAIL_TOKEN_ID: ${ORCARAIL_TOKEN_ID:-}
+      ORCARAIL_NETWORK_ID: ${ORCARAIL_NETWORK_ID:-}
+      ORCARAIL_WEBHOOK_PATH: orcarail/webhook
+      APP_URL: ${LARAVEL_URL:-http://127.0.0.1:8090}
+    volumes:
+      - laravel_app_data:/app
+      - ..:/orcarail:ro
+      - ./e2e:/e2e:ro
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'php -r "exit(@file_get_contents(\"http://127.0.0.1:8000/e2e/state\") === false ? 1 : 0);"',
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 36
+      start_period: 90s
+
+volumes:
+  laravel_app_data:
