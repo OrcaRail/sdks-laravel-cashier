@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "05da6dc28490000f7156076b6ad60ea2",
+    "content-hash": "301675f8e98b0cf1f02544506c5032c1",
     "packages": [
         {
             "name": "brick/math",
@@ -2414,11 +2414,17 @@
         },
         {
             "name": "orcarail/orcarail-php",
-            "version": "dev-main",
+            "version": "v1.0.1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/OrcaRail/sdks-php.git",
+                "reference": "bf4f90181fdce680738aa12b2e5af8a5311ef1fe"
+            },
             "dist": {
-                "type": "path",
-                "url": "../sdks-php",
-                "reference": "c6c76ecac647b4ad43b4e7027a87f0d5df065758"
+                "type": "zip",
+                "url": "https://api.github.com/repos/OrcaRail/sdks-php/zipball/bf4f90181fdce680738aa12b2e5af8a5311ef1fe",
+                "reference": "bf4f90181fdce680738aa12b2e5af8a5311ef1fe",
+                "shasum": ""
             },
             "require": {
                 "ext-curl": "*",
@@ -2436,22 +2442,7 @@
                     "OrcaRail\\": "src/"
                 }
             },
-            "autoload-dev": {
-                "psr-4": {
-                    "OrcaRail\\Tests\\": "tests/"
-                }
-            },
-            "scripts": {
-                "test": [
-                    "phpunit"
-                ],
-                "analyse": [
-                    "phpstan analyse"
-                ],
-                "cs-check": [
-                    "php-cs-fixer check --diff"
-                ]
-            },
+            "notification-url": "https://packagist.org/downloads/",
             "license": [
                 "MIT"
             ],
@@ -2461,10 +2452,7 @@
                 "issues": "https://github.com/OrcaRail/sdks-php/issues",
                 "source": "https://github.com/OrcaRail/sdks-php"
             },
-            "transport-options": {
-                "symlink": true,
-                "relative": true
-            }
+            "time": "2026-07-31T11:41:58+00:00"
         },
         {
             "name": "phpoption/phpoption",
@@ -10160,11 +10148,9 @@
         }
     ],
     "aliases": [],
-    "minimum-stability": "dev",
-    "stability-flags": {
-        "orcarail/orcarail-php": 20
-    },
-    "prefer-stable": true,
+    "minimum-stability": "stable",
+    "stability-flags": {},
+    "prefer-stable": false,
     "prefer-lowest": false,
     "platform": {
         "php": "^8.1",
