@@ -11,6 +11,8 @@ return [
     |
     | Your OrcaRail API key and secret are used for server-to-server requests.
     | Create them in the OrcaRail dashboard under API Keys.
+    | Use a sandbox organization key (ak_test_ / sk_test_, testnets only) outside
+    | production and the live key (ak_live_ / sk_live_) in production.
     |
     */
 

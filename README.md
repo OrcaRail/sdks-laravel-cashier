@@ -35,6 +35,10 @@ ORCARAIL_PAY_URL=https://pay.orcarail.com
 ORCARAIL_CURRENCY=usd
 ```
 
+### Live vs sandbox keys
+
+Use a **sandbox organization** key (`ak_test_…` / `sk_test_…`, testnets only, no real funds) in local and staging `.env` files, and the live key (`ak_live_…`) only in production. Create the sandbox with **Go to sandbox** in the OrcaRail dashboard. Webhook payloads carry `livemode` (`false` for sandbox events), so a production app can ignore test events. See [Sandbox](https://docs.orcarail.com/docs/sandbox/overview/).
+
 ## Billable model
 
 Add the `Billable` trait to your user (or other billable) model:
