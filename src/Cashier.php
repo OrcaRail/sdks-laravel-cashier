@@ -39,6 +39,16 @@ final class Cashier
     }
 
     /**
+     * False when Cashier uses a sandbox organization key (ak_test_…): testnets
+     * only, no real funds. The API decides the mode from the key's organization;
+     * this lets your app tell test payments apart (e.g. never ship real goods).
+     */
+    public static function livemode(): bool
+    {
+        return !str_starts_with(trim((string) config('orcarail-cashier.api_key')), 'ak_test_');
+    }
+
+    /**
      * Set the subscription model used by Cashier.
      *
      * @param  class-string<\OrcaRail\Cashier\Subscription>  $model

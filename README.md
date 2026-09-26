@@ -37,7 +37,7 @@ ORCARAIL_CURRENCY=usd
 
 ### Live vs sandbox keys
 
-Use a **sandbox organization** key (`ak_test_…` / `sk_test_…`, testnets only, no real funds) in local and staging `.env` files, and the live key (`ak_live_…`) only in production. Create the sandbox with **Go to sandbox** in the OrcaRail dashboard. Webhook payloads carry `livemode` (`false` for sandbox events), so a production app can ignore test events. See [Sandbox](https://docs.orcarail.com/docs/sandbox/overview/).
+Use a **sandbox organization** key (`ak_test_…` / `sk_test_…`, testnets only, no real funds) in local and staging `.env` files, and the live key (`ak_live_…`) only in production. Create the sandbox with **Go to sandbox** in the OrcaRail dashboard. Webhook payloads carry `livemode` (`false` for sandbox events), so a production app can ignore test events. `Cashier::livemode()` returns `false` when the configured key is a sandbox key. See [Sandbox](https://docs.orcarail.com/docs/sandbox/overview/).
 
 ## Billable model
 
