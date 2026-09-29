@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0
+
+- `Cashier::livemode()`: `false` for sandbox (`ak_test_`) keys.
+- Docs: live vs sandbox keys per environment.
+
 ## 1.0.1
 
 - Depend on `orcarail/orcarail-php` from public Packagist instead of a local path repository.
