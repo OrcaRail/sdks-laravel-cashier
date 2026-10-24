@@ -43,7 +43,6 @@ final class WebhookTest extends TestCase
         ];
 
         $body = json_encode($payload, JSON_THROW_ON_ERROR);
-        $signature = hash_hmac('sha256', $body, 'whsec_test');
 
         $response = $this->call(
             'POST',
@@ -51,10 +50,7 @@ final class WebhookTest extends TestCase
             [],
             [],
             [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_X_WEBHOOK_SIGNATURE' => $signature,
-            ],
+            $this->signedHeaders($body),
             $body,
         );
 
@@ -83,7 +79,8 @@ final class WebhookTest extends TestCase
             [],
             [
                 'CONTENT_TYPE' => 'application/json',
-                'HTTP_X_WEBHOOK_SIGNATURE' => str_repeat('a', 64),
+                'HTTP_X_WEBHOOK_TIMESTAMP' => (string) time(),
+                'HTTP_X_WEBHOOK_SIGNATURE_V2' => str_repeat('a', 64),
             ],
             $body,
         );
@@ -95,7 +92,6 @@ final class WebhookTest extends TestCase
     {
         $payload = ['type' => 'payment_intent.completed', 'data' => ['id' => 'pi_1']];
         $body = json_encode($payload, JSON_THROW_ON_ERROR);
-        $signature = hash_hmac('sha256', $body, 'whsec_test');
 
         $response = $this->call(
             'POST',
@@ -103,10 +99,7 @@ final class WebhookTest extends TestCase
             [],
             [],
             [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_X_WEBHOOK_SIGNATURE' => $signature,
-            ],
+            $this->signedHeaders($body),
             $body,
         );
 
@@ -136,7 +129,6 @@ final class WebhookTest extends TestCase
         ];
 
         $body = json_encode($payload, JSON_THROW_ON_ERROR);
-        $signature = hash_hmac('sha256', $body, 'whsec_test');
 
         $this->call(
             'POST',
@@ -144,10 +136,7 @@ final class WebhookTest extends TestCase
             [],
             [],
             [],
-            [
-                'CONTENT_TYPE' => 'application/json',
-                'HTTP_X_WEBHOOK_SIGNATURE' => $signature,
-            ],
+            $this->signedHeaders($body),
             $body,
         )->assertOk();
 
@@ -156,5 +145,37 @@ final class WebhookTest extends TestCase
             'billable_id' => $user->id,
             'orcarail_status' => 'trialing',
         ]);
+    }
+
+    public function test_webhook_rejects_legacy_signature_without_timestamp(): void
+    {
+        $body = json_encode(['type' => 'subscription.updated', 'data' => []], JSON_THROW_ON_ERROR);
+
+        $this->call('POST', '/orcarail/webhook', [], [], [], [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_WEBHOOK_SIGNATURE' => hash_hmac('sha256', $body, 'whsec_test'),
+        ], $body)->assertForbidden();
+    }
+
+    public function test_webhook_rejects_replayed_old_delivery(): void
+    {
+        $body = json_encode(['type' => 'subscription.updated', 'data' => []], JSON_THROW_ON_ERROR);
+
+        $this->call('POST', '/orcarail/webhook', [], [], [], $this->signedHeaders($body, time() - 301), $body)
+            ->assertForbidden();
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function signedHeaders(string $body, ?int $timestamp = null): array
+    {
+        $t = (string) ($timestamp ?? time());
+
+        return [
+            'CONTENT_TYPE' => 'application/json',
+            'HTTP_X_WEBHOOK_TIMESTAMP' => $t,
+            'HTTP_X_WEBHOOK_SIGNATURE_V2' => hash_hmac('sha256', $t . '.' . $body, 'whsec_test'),
+        ];
     }
 }
