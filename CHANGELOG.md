@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0
+
+- Security: `VerifyWebhookSignature` now requires the timestamped
+  `x-webhook-timestamp` + `x-webhook-signature-v2` headers and rejects deliveries
+  older than 5 minutes (replay protection). The legacy body-only
+  `x-webhook-signature` is no longer accepted. OrcaRail sends both headers.
+- Dependencies updated (`composer audit` clean).
+
 ## 1.1.0
 
 - `Cashier::livemode()`: `false` for sandbox (`ak_test_`) keys.

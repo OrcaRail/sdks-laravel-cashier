@@ -118,7 +118,7 @@ Cashier creates a Payment Intent, confirms it when needed, and redirects to the 
 
 ## Webhooks
 
-Cashier registers `POST /orcarail/webhook` (configurable via `ORCARAIL_WEBHOOK_PATH`) and verifies the `x-webhook-signature` HMAC header.
+Cashier registers `POST /orcarail/webhook` (configurable via `ORCARAIL_WEBHOOK_PATH`) and verifies the timestamped `x-webhook-timestamp` + `x-webhook-signature-v2` HMAC headers. Deliveries older than five minutes are rejected (replay protection); the legacy body-only `x-webhook-signature` is not accepted.
 
 Point your OrcaRail API key webhook URL at:
 

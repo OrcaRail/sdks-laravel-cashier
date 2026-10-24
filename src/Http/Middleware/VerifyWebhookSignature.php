@@ -6,26 +6,33 @@ namespace OrcaRail\Cashier\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
-use OrcaRail\Exception\SignatureVerificationException;
-use OrcaRail\WebhookSignature;
 use Symfony\Component\HttpFoundation\Response;
 
+/**
+ * Verifies the timestamped (v2) signature: HMAC-SHA256 of "<timestamp>.<body>". Deliveries
+ * older than five minutes are rejected so a captured webhook cannot be replayed. The
+ * legacy body-only signature is not accepted because it has no replay protection.
+ */
 final class VerifyWebhookSignature
 {
+    private const TOLERANCE_SECONDS = 300;
+
     /**
      * @param  Closure(Request): Response  $next
      */
     public function handle(Request $request, Closure $next): Response
     {
         $secret = (string) config('orcarail-cashier.webhook.secret', '');
-        $header = $request->header('X-Webhook-Signature')
-            ?? $request->header('x-webhook-signature')
-            ?? '';
-        $signature = is_array($header) ? (string) ($header[0] ?? '') : (string) $header;
+        $timestamp = (string) $request->headers->get('X-Webhook-Timestamp');
+        $signature = strtolower((string) $request->headers->get('X-Webhook-Signature-V2'));
 
-        try {
-            WebhookSignature::assertValid($request->getContent(), $signature, $secret);
-        } catch (SignatureVerificationException) {
+        $valid = $secret !== ''
+            && preg_match('/^\d+$/', $timestamp) === 1
+            && preg_match('/^[a-f0-9]{64}$/', $signature) === 1
+            && abs(time() - (int) $timestamp) <= self::TOLERANCE_SECONDS
+            && hash_equals(hash_hmac('sha256', $timestamp . '.' . $request->getContent(), $secret), $signature);
+
+        if (!$valid) {
             abort(403, 'Invalid OrcaRail webhook signature.');
         }
 
