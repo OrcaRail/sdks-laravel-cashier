@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.3.0
+
+- Add `Cashier::completePayment($paymentIntentId)` for the one-off checkout return
+  route. Completing is required: until it is called a paid Payment Intent stays
+  `processing`, the payment is not final, never withdrawn and no
+  `payment_intent.completed` webhook is sent.
+
 ## 1.2.0
 
 - Security: `VerifyWebhookSignature` now requires the timestamped

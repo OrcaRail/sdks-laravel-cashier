@@ -155,3 +155,21 @@ Route::post('/e2e/checkout', function (Request $request) {
         'pay_slug' => $paySlug,
     ]);
 });
+
+// Current Payment Intent status (read only).
+Route::get('/e2e/payment-status', function (Request $request) {
+    $intent = Cashier::api()->paymentIntents->retrieve((string) $request->query('payment_intent'));
+
+    return response()->json(['status' => (string) ($intent->status ?? '')]);
+});
+
+// The merchant's return route: completing the payment intent is required.
+Route::get('/e2e/checkout/return', function (Request $request) {
+    $payment = Cashier::completePayment((string) $request->query('payment_intent'));
+
+    return response()->json([
+        'intent_id' => $payment->id(),
+        'status' => $payment->status(),
+        'completed' => $payment->isCompleted(),
+    ]);
+});

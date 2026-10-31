@@ -11,7 +11,7 @@ final class Cashier
     /**
      * The Cashier library version.
      */
-    public const VERSION = '1.2.0';
+    public const VERSION = '1.3.0';
 
     /**
      * The custom subscription model class name.
@@ -36,6 +36,18 @@ final class Cashier
     public static function api(): OrcaRailClient
     {
         return app(OrcaRailClient::class);
+    }
+
+    /**
+     * Finish a one-off checkout from your return route (the `payment_intent` query
+     * parameter). Required: OrcaRail keeps a paid intent `processing` until it is
+     * completed; until then the payment is not final, never withdrawn and no
+     * `payment_intent.completed` webhook is sent. The intent completes once the
+     * payment is confirmed on-chain; while it is still `processing`, call this again.
+     */
+    public static function completePayment(string $paymentIntentId): Payment
+    {
+        return new Payment(self::api()->paymentIntents->complete($paymentIntentId));
     }
 
     /**

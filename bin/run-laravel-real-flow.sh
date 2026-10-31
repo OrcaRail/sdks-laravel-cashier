@@ -330,18 +330,35 @@ case "$CHECKOUT_URL" in
     ;;
 esac
 
-echo "Simulating payment complete for checkout slug=$CHECKOUT_SLUG ..."
+# Scanner-style: the payment is confirmed on-chain, nothing completes it. The
+# payment intent must stay processing until the return route calls complete.
+echo "Confirming the checkout payment on-chain for slug=$CHECKOUT_SLUG ..."
 SIM2_JSON="$(
   curl -fsS -X POST "$API_HOST/api/__real-flow/simulate" \
     -H 'Content-Type: application/json' \
-    -d "$(jq -n --arg s "$CHECKOUT_SLUG" '{action:"complete-first-payment",FLOW_PAYMENT_LINK_SLUG:$s}')"
+    -d "$(jq -n --arg s "$CHECKOUT_SLUG" '{action:"confirm-first-payment",FLOW_PAYMENT_LINK_SLUG:$s}')"
 )"
 echo "$SIM2_JSON" | jq .
+
+PRE_STATUS="$(curl -fsS "$LARAVEL_URL/e2e/payment-status?payment_intent=$INTENT_ID" | jq -r '.status')"
+if [[ "$PRE_STATUS" == "completed" ]]; then
+  echo "payment intent completed before the return route called complete" >&2
+  exit 1
+fi
+echo "payment intent status before return: $PRE_STATUS"
+
+echo "Calling the return route (Cashier::completePayment) ..."
+RETURN_JSON="$(curl -fsS "$LARAVEL_URL/e2e/checkout/return?payment_intent=$INTENT_ID")"
+echo "$RETURN_JSON" | jq .
+if ! echo "$RETURN_JSON" | jq -e '.completed == true and .status == "completed"' >/dev/null; then
+  echo "Cashier::completePayment did not complete the payment intent" >&2
+  exit 1
+fi
 
 echo ""
 echo "Laravel Cashier real-flow smoke passed."
 echo "  subscription=$ORCARAIL_SUB_ID"
-echo "  intent=$INTENT_ID"
+echo "  intent=$INTENT_ID (completed by Cashier::completePayment)"
 echo "  webhook_url=$WEBHOOK_URL"
 if [[ "$DELIVERED" == "1" ]]; then
   echo "  async webhook_log: observed"

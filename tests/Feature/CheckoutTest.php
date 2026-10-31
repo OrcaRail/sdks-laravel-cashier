@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace OrcaRail\Cashier\Tests\Feature;
 
+use OrcaRail\Cashier\Cashier;
 use OrcaRail\Cashier\Checkout;
 use OrcaRail\Cashier\Exceptions\IncompletePayment;
 use OrcaRail\Cashier\Tests\TestCase;
@@ -54,6 +55,24 @@ final class CheckoutTest extends TestCase
         $this->assertNotNull($checkout->payment);
         $this->assertSame('pi_123', $checkout->payment->id());
         $this->assertCount(2, $this->fakeHttp->requests);
+    }
+
+    public function test_complete_payment_completes_the_payment_intent(): void
+    {
+        $this->fakeHttp->respondWith(function (string $method, string $path): array {
+            if ($method === 'POST' && $path === 'payment_intents/pi_123/complete') {
+                return ['id' => 'pi_123', 'status' => 'completed'];
+            }
+
+            return [];
+        });
+
+        $payment = Cashier::completePayment('pi_123');
+
+        $this->assertTrue($payment->isCompleted());
+        $this->assertSame('pi_123', $payment->id());
+        $this->assertSame('POST', $this->fakeHttp->requests[0]['method']);
+        $this->assertSame('payment_intents/pi_123/complete', $this->fakeHttp->requests[0]['path']);
     }
 
     public function test_checkout_throws_when_no_redirect_url(): void

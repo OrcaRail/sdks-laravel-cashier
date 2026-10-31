@@ -116,6 +116,21 @@ return $user->charge([
 
 Cashier creates a Payment Intent, confirms it when needed, and redirects to the hosted pay URL from `next_action.redirect_to_url.url` (or `pay_url` / `payment_link.link`).
 
+**Complete the payment on your return route (required).** OrcaRail keeps a paid Payment Intent `processing` until you complete it; until then the payment is not final, is never withdrawn and no `payment_intent.completed` webhook is sent. The hosted pay page sends the customer to your `return_url` with `?payment_intent=<id>` once the payment is confirmed:
+
+```php
+use Illuminate\Http\Request;
+use OrcaRail\Cashier\Cashier;
+
+Route::get('/orders/return', function (Request $request) {
+    $payment = Cashier::completePayment((string) $request->query('payment_intent'));
+
+    return $payment->isCompleted()
+        ? redirect()->route('orders.thanks')
+        : view('orders.pending'); // still processing: call completePayment() again later
+})->name('orders.return');
+```
+
 ## Webhooks
 
 Cashier registers `POST /orcarail/webhook` (configurable via `ORCARAIL_WEBHOOK_PATH`) and verifies the timestamped `x-webhook-timestamp` + `x-webhook-signature-v2` HMAC headers. Deliveries older than five minutes are rejected (replay protection); the legacy body-only `x-webhook-signature` is not accepted.
