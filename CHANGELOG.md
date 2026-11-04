@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+- **Breaking, security:** `Subscription::active()` (and so `subscribed()`) now only
+  counts a paid `active` subscription or a `trialing` one whose trial has not
+  ended. `past_due`, `paused`, expired trials and unpaid checkouts no longer grant
+  access. A new checkout is stored as `incomplete` until a cycle is paid; the new
+  `subscription.payment_link.paid` webhook handler activates it.
+- Security: webhook payloads are read from the signed raw body only (query
+  parameters and non-JSON bodies are ignored).
+- Security: a webhook-created subscription must belong to a model that uses the
+  `Billable` trait; `subscriptions()` is ordered newest first.
+
 ## 1.3.0
 
 - Add `Cashier::completePayment($paymentIntentId)` for the one-off checkout return
