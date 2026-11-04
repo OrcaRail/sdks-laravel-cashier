@@ -51,6 +51,25 @@ class WebhookController extends Controller
     }
 
     /**
+     * A billing cycle was paid. The payload carries no status, so refresh the row from the API
+     * (this is what turns an `incomplete` checkout into an `active` subscription).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function handleSubscriptionPaymentLinkPaid(array $payload): void
+    {
+        $data = $this->extractEventObject($payload);
+        $orcarailId = isset($data['id']) && is_string($data['id']) ? $data['id'] : null;
+        if ($orcarailId === null) {
+            return;
+        }
+
+        /** @var class-string<Subscription> $model */
+        $model = Cashier::$subscriptionModel;
+        $model::query()->where('orcarail_id', $orcarailId)->first()?->syncOrcaRailStatus();
+    }
+
+    /**
      * @param  array<string, mixed>  $payload
      */
     protected function handleSubscriptionCanceled(array $payload): void
@@ -188,7 +207,7 @@ class WebhookController extends Controller
             'billable_id' => $billableId,
             'type' => $type,
             'orcarail_id' => (string) $data['id'],
-            'orcarail_status' => (string) ($data['status'] ?? 'incomplete'),
+            'orcarail_status' => Subscription::localStatusFrom($data, 'incomplete'),
             'orcarail_price_id' => isset($data['price_id']) && is_string($data['price_id'])
                 ? $data['price_id']
                 : null,

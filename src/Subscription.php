@@ -54,12 +54,37 @@ class Subscription extends Model
         return $this->owner();
     }
 
+    /**
+     * Access is an allowlist: only a paid `active` subscription, or a `trialing` one whose trial has
+     * not ended. `past_due`, `paused`, `incomplete` (unpaid checkout) and expired trials are not
+     * active.
+     */
     public function active(): bool
     {
         return (is_null($this->ends_at) || $this->onGracePeriod())
-            && $this->orcarail_status !== 'canceled'
-            && $this->orcarail_status !== 'completed'
-            && (!$this->incomplete() || $this->onTrial());
+            && ($this->orcarail_status === 'active'
+                || ($this->orcarail_status === 'trialing' && $this->onTrial()));
+    }
+
+    /**
+     * Local status for an OrcaRail subscription payload. OrcaRail reports a new subscription as
+     * `active` before its first payment, so `active` only counts once `completed_cycles` is at least
+     * 1. A payload without the count (for example `subscription.updated`) never upgrades a row that
+     * is still `incomplete`.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function localStatusFrom(array $data, ?string $current): string
+    {
+        $status = (string) ($data['status'] ?? $current ?? 'incomplete');
+        if ($status !== 'active') {
+            return $status;
+        }
+        if (array_key_exists('completed_cycles', $data)) {
+            return (int) $data['completed_cycles'] >= 1 ? 'active' : 'incomplete';
+        }
+
+        return $current === 'incomplete' ? 'incomplete' : 'active';
     }
 
     public function valid(): bool
@@ -165,7 +190,7 @@ class Subscription extends Model
 
         $data = $remote instanceof OrcaRailObject ? $remote->toArray() : $remote;
 
-        $status = (string) ($data['status'] ?? $this->orcarail_status);
+        $status = self::localStatusFrom($data, $this->orcarail_status);
         $this->orcarail_status = $status;
 
         if (isset($data['price_id']) && is_string($data['price_id'])) {

@@ -165,7 +165,8 @@ final class SubscriptionBuilder
         $model = Cashier::$subscriptionModel;
 
         $trialEnd = $remote->trial_end;
-        $status = (string) ($remote->status ?? 'incomplete');
+        // A new checkout is not paid yet: it stays `incomplete` until a paid cycle is reported.
+        $status = Subscription::localStatusFrom($remote->toArray(), 'incomplete');
         $priceId = is_string($remote->price_id) ? $remote->price_id : $this->priceId;
 
         /** @var Subscription $subscription */
