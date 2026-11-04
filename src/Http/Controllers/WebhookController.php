@@ -18,7 +18,16 @@ class WebhookController extends Controller
 {
     public function handleWebhook(Request $request): Response
     {
-        $payload = $request->all();
+        // Read the payload from the raw body the signature was checked against, never from
+        // $request->all(): that merges the query string and ignores non-JSON bodies.
+        try {
+            $payload = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return new Response('Invalid webhook payload', 400);
+        }
+        if (!is_array($payload)) {
+            return new Response('Invalid webhook payload', 400);
+        }
 
         WebhookReceived::dispatch($payload);
 

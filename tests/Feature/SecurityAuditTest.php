@@ -79,4 +79,49 @@ final class SecurityAuditTest extends TestCase
 
         $this->assertFalse($user->subscribed());
     }
+
+    /** @return array<string, string> */
+    private function signedHeaders(string $body, string $contentType = 'application/json'): array
+    {
+        $t = (string) time();
+
+        return [
+            'CONTENT_TYPE' => $contentType,
+            'HTTP_X_WEBHOOK_TIMESTAMP' => $t,
+            'HTTP_X_WEBHOOK_SIGNATURE_V2' => hash_hmac('sha256', $t . '.' . $body, 'whsec_test'),
+        ];
+    }
+
+    // CASH-2: the signature covers the raw body, but the handler read $request->all(). With a
+    // text/plain body, all() is only the query string, so a captured signed delivery can be
+    // replayed with attacker-chosen query parameters.
+    public function test_cash2_webhook_payload_comes_from_the_signed_body_only(): void
+    {
+        $user = $this->createUser();
+        $this->subscriptionFor($user, ['orcarail_id' => 'sub_victim']);
+        $body = json_encode(['type' => 'ping', 'data' => ['object' => ['id' => 'x']]], JSON_THROW_ON_ERROR);
+
+        $this->call(
+            'POST',
+            '/orcarail/webhook?' . http_build_query([
+                'type' => 'subscription.canceled',
+                'data' => ['object' => [
+                    'id' => 'sub_victim',
+                    'status' => 'canceled',
+                    'canceled_at' => '2026-01-01T00:00:00Z',
+                    'ended_at' => '2026-01-01T00:00:00Z',
+                ]],
+            ]),
+            [],
+            [],
+            [],
+            $this->signedHeaders($body, 'text/plain'),
+            $body,
+        );
+
+        $this->assertDatabaseHas('subscriptions', [
+            'orcarail_id' => 'sub_victim',
+            'orcarail_status' => 'active',
+        ]);
+    }
 }
