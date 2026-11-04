@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace OrcaRail\Cashier\Http\Controllers;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
+use OrcaRail\Cashier\Billable;
 use OrcaRail\Cashier\Cashier;
 use OrcaRail\Cashier\Events\WebhookHandled;
 use OrcaRail\Cashier\Events\WebhookReceived;
@@ -203,6 +205,13 @@ class WebhookController extends Controller
             : 'default';
 
         if (!is_string($billableType) || $billableType === '' || $billableId === null || $billableId === '') {
+            return null;
+        }
+
+        // Only a model that uses the Billable trait may own a subscription; otherwise the payload
+        // could attach one to any Eloquent class.
+        $billableClass = Relation::getMorphedModel($billableType) ?? $billableType;
+        if (!class_exists($billableClass) || !in_array(Billable::class, class_uses_recursive($billableClass), true)) {
             return null;
         }
 

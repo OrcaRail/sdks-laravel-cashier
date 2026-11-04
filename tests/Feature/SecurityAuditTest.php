@@ -124,4 +124,38 @@ final class SecurityAuditTest extends TestCase
             'orcarail_status' => 'active',
         ]);
     }
+
+    // CASH-4: metadata.billable_type from the payload picked any Eloquent model class.
+    public function test_cash4_webhook_cannot_attach_a_subscription_to_another_model_class(): void
+    {
+        $body = json_encode([
+            'type' => 'subscription.created',
+            'data' => ['object' => [
+                'id' => 'sub_foreign_model',
+                'status' => 'active',
+                'metadata' => [
+                    'billable_type' => 'App\\Models\\Admin',
+                    'billable_id' => '1',
+                ],
+            ]],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->call('POST', '/orcarail/webhook', [], [], [], $this->signedHeaders($body), $body);
+
+        $this->assertDatabaseMissing('subscriptions', ['orcarail_id' => 'sub_foreign_model']);
+    }
+
+    public function test_cash4_subscription_returns_the_newest_row_of_a_type(): void
+    {
+        $user = $this->createUser();
+        $this->subscriptionFor($user, [
+            'orcarail_id' => 'sub_old',
+            'orcarail_status' => 'canceled',
+            'ends_at' => now()->subMonth(),
+            'created_at' => now()->subYear(),
+        ]);
+        $this->subscriptionFor($user, ['orcarail_id' => 'sub_new', 'created_at' => now()]);
+
+        $this->assertSame('sub_new', $user->subscription('default')?->orcarail_id);
+    }
 }
