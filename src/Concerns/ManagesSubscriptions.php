@@ -33,9 +33,11 @@ trait ManagesSubscriptions
         $model = Cashier::$subscriptionModel;
 
         // Newest first, so subscription($type) returns the current row, not the oldest one.
-        return $this->morphMany($model, 'billable')
-            ->orderByDesc('created_at')
-            ->orderByDesc('id');
+        // The relation forwards orderByDesc to its query; return the relation itself.
+        $relation = $this->morphMany($model, 'billable');
+        $relation->orderByDesc('created_at')->orderByDesc('id');
+
+        return $relation;
     }
 
     /**
