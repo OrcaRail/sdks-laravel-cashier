@@ -165,6 +165,37 @@ final class WebhookTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_paid_cycle_webhook_activates_an_unpaid_checkout(): void
+    {
+        $user = $this->createUser();
+        Subscription::query()->create([
+            'billable_type' => $user->getMorphClass(),
+            'billable_id' => $user->id,
+            'type' => 'default',
+            'orcarail_id' => 'sub_paid_1',
+            'orcarail_status' => 'incomplete',
+            'orcarail_price_id' => 'price_abc',
+            'trial_ends_at' => null,
+            'ends_at' => null,
+        ]);
+        $this->fakeHttp->respondWith([
+            'id' => 'sub_paid_1',
+            'status' => 'active',
+            'completed_cycles' => 1,
+            'price_id' => 'price_abc',
+            'trial_end' => null,
+        ]);
+        $body = json_encode([
+            'type' => 'subscription.payment_link.paid',
+            'data' => ['object' => ['id' => 'sub_paid_1', 'payment_link_id' => 'pl_1', 'completed_cycles' => 1]],
+        ], JSON_THROW_ON_ERROR);
+
+        $this->call('POST', '/orcarail/webhook', [], [], [], $this->signedHeaders($body), $body)->assertOk();
+
+        $this->assertDatabaseHas('subscriptions', ['orcarail_id' => 'sub_paid_1', 'orcarail_status' => 'active']);
+        $this->assertTrue($user->subscribed());
+    }
+
     /**
      * @return array<string, string>
      */

@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace OrcaRail\Cashier\Http\Controllers;
 
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Str;
+use OrcaRail\Cashier\Billable;
 use OrcaRail\Cashier\Cashier;
 use OrcaRail\Cashier\Events\WebhookHandled;
 use OrcaRail\Cashier\Events\WebhookReceived;
@@ -18,7 +20,16 @@ class WebhookController extends Controller
 {
     public function handleWebhook(Request $request): Response
     {
-        $payload = $request->all();
+        // Read the payload from the raw body the signature was checked against, never from
+        // $request->all(): that merges the query string and ignores non-JSON bodies.
+        try {
+            $payload = json_decode($request->getContent(), true, 512, JSON_THROW_ON_ERROR);
+        } catch (\JsonException) {
+            return new Response('Invalid webhook payload', 400);
+        }
+        if (!is_array($payload)) {
+            return new Response('Invalid webhook payload', 400);
+        }
 
         WebhookReceived::dispatch($payload);
 
@@ -48,6 +59,25 @@ class WebhookController extends Controller
     protected function handleSubscriptionUpdated(array $payload): void
     {
         $this->syncSubscriptionFromPayload($payload);
+    }
+
+    /**
+     * A billing cycle was paid. The payload carries no status, so refresh the row from the API
+     * (this is what turns an `incomplete` checkout into an `active` subscription).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    protected function handleSubscriptionPaymentLinkPaid(array $payload): void
+    {
+        $data = $this->extractEventObject($payload);
+        $orcarailId = isset($data['id']) && is_string($data['id']) ? $data['id'] : null;
+        if ($orcarailId === null) {
+            return;
+        }
+
+        /** @var class-string<Subscription> $model */
+        $model = Cashier::$subscriptionModel;
+        $model::query()->where('orcarail_id', $orcarailId)->first()?->syncOrcaRailStatus();
     }
 
     /**
@@ -178,6 +208,13 @@ class WebhookController extends Controller
             return null;
         }
 
+        // Only a model that uses the Billable trait may own a subscription; otherwise the payload
+        // could attach one to any Eloquent class.
+        $billableClass = Relation::getMorphedModel($billableType) ?? $billableType;
+        if (!class_exists($billableClass) || !in_array(Billable::class, class_uses_recursive($billableClass), true)) {
+            return null;
+        }
+
         $trialEnd = $data['trial_end'] ?? null;
 
         /** @var class-string<Subscription> $model */
@@ -188,7 +225,7 @@ class WebhookController extends Controller
             'billable_id' => $billableId,
             'type' => $type,
             'orcarail_id' => (string) $data['id'],
-            'orcarail_status' => (string) ($data['status'] ?? 'incomplete'),
+            'orcarail_status' => Subscription::localStatusFrom($data, 'incomplete'),
             'orcarail_price_id' => isset($data['price_id']) && is_string($data['price_id'])
                 ? $data['price_id']
                 : null,

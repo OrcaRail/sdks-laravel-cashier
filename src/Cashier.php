@@ -11,7 +11,7 @@ final class Cashier
     /**
      * The Cashier library version.
      */
-    public const VERSION = '1.3.0';
+    public const VERSION = '2.0.0';
 
     /**
      * The custom subscription model class name.

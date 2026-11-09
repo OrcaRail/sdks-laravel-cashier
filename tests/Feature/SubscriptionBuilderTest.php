@@ -34,15 +34,16 @@ final class SubscriptionBuilderTest extends TestCase
         $this->assertSame('https://pay.orcarail.com/pay/pl_abc123', $checkout->url());
         $this->assertInstanceOf(Subscription::class, $checkout->subscription);
 
+        // Not paid yet: the checkout grants no access until a paid cycle is reported.
         $this->assertDatabaseHas('subscriptions', [
             'billable_id' => $user->id,
             'orcarail_id' => 'sub_123',
-            'orcarail_status' => 'active',
+            'orcarail_status' => 'incomplete',
             'orcarail_price_id' => 'price_abc',
             'type' => 'default',
         ]);
 
-        $this->assertTrue($user->subscribed());
+        $this->assertFalse($user->subscribed());
         $this->assertNotNull($user->subscription());
 
         $this->assertCount(1, $this->fakeHttp->requests);
