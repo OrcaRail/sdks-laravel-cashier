@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.0
 
 - **Breaking, security:** `Subscription::active()` (and so `subscribed()`) now only
   counts a paid `active` subscription or a `trialing` one whose trial has not
@@ -11,6 +11,8 @@
   parameters and non-JSON bodies are ignored).
 - Security: a webhook-created subscription must belong to a model that uses the
   `Billable` trait; `subscriptions()` is ordered newest first.
+- Upgrading from 1.x: `subscribed()` is now false while a payment is late. To keep
+  access during that time, also check `$subscription->pastDue()` in your gate.
 
 ## 1.3.0
 
