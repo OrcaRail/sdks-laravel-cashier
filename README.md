@@ -162,6 +162,8 @@ Access the underlying PHP SDK client:
 Cashier::api()->rates->list();
 ```
 
+The `Subscription` model allows mass assignment of every column (`$guarded = []`), so the package can sync it from OrcaRail. Never pass request input to `Subscription::create()`, `fill()` or `update()`: a visitor could set any column, such as the status or the OrcaRail id. Copy only the fields you checked.
+
 ## Testing
 
 Unit / feature (testbench):
